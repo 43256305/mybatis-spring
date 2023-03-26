@@ -73,6 +73,8 @@ import org.springframework.core.annotation.AliasFor;
  *
  * @see MapperScannerRegistrar
  * @see MapperFactoryBean
+ *
+ * xjh-引入MapperScannerRegistrar类
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)

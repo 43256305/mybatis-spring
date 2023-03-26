@@ -51,6 +51,11 @@ import org.springframework.util.StringUtils;
  * @see ClassPathMapperScanner
  *
  * @since 1.2.0
+ *
+ * xjh-被@MapperScan注解所引入，注册MapperScannerConfigurer到context中，用于扫描Mapper包。并且读取@MapperScan中的各项属性注入到MapperScannerConfigurer中。
+ *
+ * 他的内部类RepeatingRegistrar，用于与@MapperScans配合使用，@MapperScans可以包含多个@MapperScan注解。
+ *
  */
 public class MapperScannerRegistrar implements ImportBeanDefinitionRegistrar, ResourceLoaderAware {
 
@@ -81,6 +86,7 @@ public class MapperScannerRegistrar implements ImportBeanDefinitionRegistrar, Re
   void registerBeanDefinitions(AnnotationMetadata annoMeta, AnnotationAttributes annoAttrs,
       BeanDefinitionRegistry registry, String beanName) {
 
+    // xjh-构造一个BeanDefinitionBuilder，并且传入需要构造的类为MapperScannerConfigurer
     BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(MapperScannerConfigurer.class);
     builder.addPropertyValue("processPropertyPlaceHolders", true);
 
@@ -89,16 +95,19 @@ public class MapperScannerRegistrar implements ImportBeanDefinitionRegistrar, Re
       builder.addPropertyValue("annotationClass", annotationClass);
     }
 
+    // 为MapperScannerConfigurer的markerInterface属性设置值
     Class<?> markerInterface = annoAttrs.getClass("markerInterface");
     if (!Class.class.equals(markerInterface)) {
       builder.addPropertyValue("markerInterface", markerInterface);
     }
 
+    // 为MapperScannerConfigurer的nameGenerator属性设置值
     Class<? extends BeanNameGenerator> generatorClass = annoAttrs.getClass("nameGenerator");
     if (!BeanNameGenerator.class.equals(generatorClass)) {
       builder.addPropertyValue("nameGenerator", BeanUtils.instantiateClass(generatorClass));
     }
 
+    // 为MapperScannerConfigurer的mapperFactoryBeanClass属性设置值
     Class<? extends MapperFactoryBean> mapperFactoryBeanClass = annoAttrs.getClass("factoryBean");
     if (!MapperFactoryBean.class.equals(mapperFactoryBeanClass)) {
       builder.addPropertyValue("mapperFactoryBeanClass", mapperFactoryBeanClass);
@@ -141,6 +150,7 @@ public class MapperScannerRegistrar implements ImportBeanDefinitionRegistrar, Re
     // for spring-native
     builder.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
 
+    // 最后，注册MapperScannerConfigurer
     registry.registerBeanDefinition(beanName, builder.getBeanDefinition());
 
   }

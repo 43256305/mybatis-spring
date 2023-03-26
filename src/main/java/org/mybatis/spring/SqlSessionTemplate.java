@@ -71,13 +71,19 @@ import org.springframework.dao.support.PersistenceExceptionTranslator;
  *
  * @see SqlSessionFactory
  * @see MyBatisExceptionTranslator
+ *
+ * xjh-线程安全（因此sqlSessionTemplate被共享使用，一个context中一般只有一个）。用于管理sqlSession的生命周期，如关闭，提交事务，回滚、select、update等。
+ * 与sqlSession相关的操作如select等都会交给sqlSessionProxy执行
  */
 public class SqlSessionTemplate implements SqlSession, DisposableBean {
 
+  // 传入的sqlSessionFactory，用于创建sqlSession
   private final SqlSessionFactory sqlSessionFactory;
 
+  // 创建的sqlSession中executor类型，默认使用sqlSessionFactory中定义的类型
   private final ExecutorType executorType;
 
+  // SqlSession动态代理对象，查看内部类SqlSessionInterceptor
   private final SqlSession sqlSessionProxy;
 
   private final PersistenceExceptionTranslator exceptionTranslator;
@@ -128,6 +134,7 @@ public class SqlSessionTemplate implements SqlSession, DisposableBean {
     this.sqlSessionFactory = sqlSessionFactory;
     this.executorType = executorType;
     this.exceptionTranslator = exceptionTranslator;
+    // 创建一个 SqlSession 的动态代理对象，代理类为 内部类SqlSessionInterceptor
     this.sqlSessionProxy = (SqlSession) newProxyInstance(SqlSessionFactory.class.getClassLoader(),
         new Class[] { SqlSession.class }, new SqlSessionInterceptor());
   }
@@ -419,13 +426,18 @@ public class SqlSessionTemplate implements SqlSession, DisposableBean {
   private class SqlSessionInterceptor implements InvocationHandler {
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+      // 获取一个 DefaultSqlSession 对象（这里我们需要借助Spring提供的事务管理器，详情查看事务相关知识）
+      // 如果我们没有开启事务，则每次进入这里都会获取一个全新的DefaultSqlSession
       SqlSession sqlSession = getSqlSession(SqlSessionTemplate.this.sqlSessionFactory,
           SqlSessionTemplate.this.executorType, SqlSessionTemplate.this.exceptionTranslator);
       try {
+        // 执行 DefaultSqlSession 的方法
         Object result = method.invoke(sqlSession, args);
+        // 当前 SqlSession 不处于 Spring 托管的事务中（如果我们没有开启事务，则永远会进入这里）
         if (!isSqlSessionTransactional(sqlSession, SqlSessionTemplate.this.sqlSessionFactory)) {
           // force commit even on non-dirty sessions because some databases require
           // a commit/rollback before calling close()
+          // 强制提交
           sqlSession.commit(true);
         }
         return result;
@@ -444,6 +456,7 @@ public class SqlSessionTemplate implements SqlSession, DisposableBean {
         throw unwrapped;
       } finally {
         if (sqlSession != null) {
+          // 最后都会关闭sqlSession（根据sqlSession是否被spring事务管理器托管而选择关闭还是引用减一）
           closeSqlSession(sqlSession, SqlSessionTemplate.this.sqlSessionFactory);
         }
       }

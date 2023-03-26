@@ -35,6 +35,8 @@ import org.springframework.dao.support.DaoSupport;
  * @see #setSqlSessionFactory
  * @see #setSqlSessionTemplate
  * @see SqlSessionTemplate
+ *
+ * xjh-此类用于构建并暴露sqlSessionTemplate
  */
 public abstract class SqlSessionDaoSupport extends DaoSupport {
 
@@ -49,6 +51,7 @@ public abstract class SqlSessionDaoSupport extends DaoSupport {
    */
   public void setSqlSessionFactory(SqlSessionFactory sqlSessionFactory) {
     if (this.sqlSessionTemplate == null || sqlSessionFactory != this.sqlSessionTemplate.getSqlSessionFactory()) {
+      // xjh-创建sqlSessionTemplate
       this.sqlSessionTemplate = createSqlSessionTemplate(sqlSessionFactory);
     }
   }

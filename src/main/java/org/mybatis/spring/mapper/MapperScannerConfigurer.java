@@ -87,10 +87,19 @@ import org.springframework.util.StringUtils;
  *
  * @see MapperFactoryBean
  * @see ClassPathMapperScanner
+ *
+ * xjh-递归扫描配置的basePackage目录，将所有扫描到的至少包含一个方法的接口通过ClassPathMapperScanner注册为MapperFactoryBean。
+ *
+ * 此方法支持接口过滤。
+ * 实现了BeanDefinitionRegistryPostProcessor.postProcessBeanDefinitionRegistry()接口，实现了Mapper接口扫描与beanDefinition注册操作.
+ *
+ * 此类的属性我们都是可以配置的。
+ *
  */
 public class MapperScannerConfigurer
     implements BeanDefinitionRegistryPostProcessor, InitializingBean, ApplicationContextAware, BeanNameAware {
 
+  // 扫描的路径，可以包含多个路径，以逗号分割
   private String basePackage;
 
   private boolean addToConfig = true;
@@ -366,9 +375,11 @@ public class MapperScannerConfigurer
     scanner.setMarkerInterface(this.markerInterface);
     scanner.setSqlSessionFactory(this.sqlSessionFactory);
     scanner.setSqlSessionTemplate(this.sqlSessionTemplate);
+    // 设置 SqlSessionFactory 的 BeanName
     scanner.setSqlSessionFactoryBeanName(this.sqlSessionFactoryBeanName);
     scanner.setSqlSessionTemplateBeanName(this.sqlSessionTemplateBeanName);
     scanner.setResourceLoader(this.applicationContext);
+    // 设置BeanNameGenerator
     scanner.setBeanNameGenerator(this.nameGenerator);
     scanner.setMapperFactoryBeanClass(this.mapperFactoryBeanClass);
     if (StringUtils.hasText(lazyInitialization)) {
@@ -377,7 +388,9 @@ public class MapperScannerConfigurer
     if (StringUtils.hasText(defaultScope)) {
       scanner.setDefaultScope(defaultScope);
     }
+    // 注册过滤器
     scanner.registerFilters();
+    // 执行扫描操作
     scanner.scan(
         StringUtils.tokenizeToStringArray(this.basePackage, ConfigurableApplicationContext.CONFIG_LOCATION_DELIMITERS));
   }

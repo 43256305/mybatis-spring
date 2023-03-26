@@ -50,9 +50,15 @@ import org.springframework.beans.factory.FactoryBean;
  * @author Eduardo Macarron
  *
  * @see SqlSessionTemplate
+ *
+ * xjh-Mapper工厂，用于获取代理Mapper类。
+ *
+ * 实现了FactoryBean接口，getObject()方法返回sqlSessionTemplate生成代理Mapper类。
+ * 继承了SqlSessionDaoSupport类，此类包含了一个sqlSessionTemplate，通过sqlSessionTemplate获取Mapper接口代理对象
  */
 public class MapperFactoryBean<T> extends SqlSessionDaoSupport implements FactoryBean<T> {
 
+  // 对应的Mapper接口
   private Class<T> mapperInterface;
 
   private boolean addToConfig = true;
@@ -67,9 +73,12 @@ public class MapperFactoryBean<T> extends SqlSessionDaoSupport implements Factor
 
   /**
    * {@inheritDoc}
+   * xjh-校验该Mapper接口是否被解析并添加到 Configuration的mapperRegistry 中，没有则解析并添加到configuration中
+   * 此方法在父类的afterPropertiesSet方法中被调用。
    */
   @Override
   protected void checkDaoConfig() {
+    // 校验父类的sqlSessionTemplate不能为空
     super.checkDaoConfig();
 
     notNull(this.mapperInterface, "Property 'mapperInterface' is required");
@@ -77,6 +86,7 @@ public class MapperFactoryBean<T> extends SqlSessionDaoSupport implements Factor
     Configuration configuration = getSqlSession().getConfiguration();
     if (this.addToConfig && !configuration.hasMapper(this.mapperInterface)) {
       try {
+        // 如果configuration中没有包含此此Mapper接口，则将其解析并添加到configuration中
         configuration.addMapper(this.mapperInterface);
       } catch (Exception e) {
         logger.error("Error while adding the mapper '" + this.mapperInterface + "' to configuration.", e);
@@ -92,6 +102,7 @@ public class MapperFactoryBean<T> extends SqlSessionDaoSupport implements Factor
    */
   @Override
   public T getObject() throws Exception {
+    // xjh-获取Mapper代理对象。getSqlSession()返回sqlSessionTemplate。
     return getSqlSession().getMapper(this.mapperInterface);
   }
 
